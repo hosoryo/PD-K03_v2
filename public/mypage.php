@@ -101,11 +101,6 @@ $avatarInitial = function_exists('mb_substr')
         <h1>アンケート＆ポイント - マイページ</h1>
         <div class="muted">ユーザー専用ページ｜ポイント・回答履歴</div>
       </div>
-      <nav>
-        <a href="/index.php">アンケート</a>
-        <a href="/opinion.html">意見箱</a>
-        <a href="/logout.php">ログアウト</a>
-      </nav>
     </header>
 
     <main class="grid">
@@ -137,27 +132,21 @@ $avatarInitial = function_exists('mb_substr')
           </div>
         </div>
 
-        <!-- ★ ここにログアウトボタンを追加 -->
+        <!-- ログアウトボタン -->
         <div style="text-align:right; margin-top:12px;">
           <a href="/logout.php" class="btn logout-btn">ログアウト</a>
         </div>
 
         <hr style="margin:14px 0; border:none; border-top:1px solid #eef2ff;">
 
+        <!-- ▼ ここが履歴連携部分 -->
         <h2>アンケート履歴</h2>
-        <div class="muted" style="margin-bottom:8px;">※ 今はダミー表示</div>
+        <div class="muted" style="margin-bottom:8px;">
+          ※ このブラウザで回答したアンケートの履歴を表示します。
+        </div>
 
-        <div class="survey-list">
-          <div class="survey-item">
-            <div>
-              <div style="font-weight:600">サンプルアンケート</div>
-              <div class="muted">回答日: 2025-11-01</div>
-            </div>
-            <div style="text-align:right">
-              <div class="muted">獲得</div>
-              <div style="font-weight:700;color:var(--success)">+10 pt</div>
-            </div>
-          </div>
+        <div class="survey-list" id="mypageHistoryList">
+          <!-- JavaScriptで履歴を差し込む -->
         </div>
 
         <div style="margin-top:18px; display:flex; gap:10px;">
@@ -181,7 +170,10 @@ $avatarInitial = function_exists('mb_substr')
 
         <div class="muted" style="margin-top:16px;">クイックリンク</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-          <a class="btn secondary" href="/index.php">アンケート一覧</a>
+          <a class="btn secondary" href="/index.php">ホーム</a>
+          <a class="btn secondary" href="/ank2.html">アンケート一覧</a>
+          <a class="btn secondary" href="/opinion.html">意見箱</a>
+          <a class="btn secondary" href="/rire2.html">履歴</a>
           <a class="btn secondary" href="/keihin.html">景品交換</a>
         </div>
 
@@ -205,6 +197,44 @@ $avatarInitial = function_exists('mb_substr')
 <script>
 document.getElementById('btnExchange').addEventListener('click', () => {
   document.getElementById('modal').classList.add('show');
+});
+
+// ▼ マイページに localStorage の履歴を表示する処理
+document.addEventListener('DOMContentLoaded', () => {
+  const list = document.getElementById('mypageHistoryList');
+  if (!list) return;
+
+  const historyData = JSON.parse(localStorage.getItem('surveyHistory') || '[]');
+
+  if (historyData.length === 0) {
+    list.innerHTML = '<div class="muted">回答履歴はまだありません。</div>';
+    return;
+  }
+
+  // 直近5件だけ表示（全部出したければ historyData.forEach に変えてOK）
+  const recent = historyData.slice(-5).reverse();
+
+  recent.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'survey-item';
+
+    const name = item.name || '（名称未設定のアンケート）';
+    const date = item.date || '日付不明';
+    const point = item.point || 0;
+
+    div.innerHTML = `
+      <div>
+        <div style="font-weight:600">${name}</div>
+        <div class="muted">回答日: ${date}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="muted">獲得</div>
+        <div style="font-weight:700;color:var(--success);">${point} pt</div>
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
 });
 </script>
 
