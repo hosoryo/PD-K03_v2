@@ -30,15 +30,9 @@ require_login();
                 <!-- 後ほどページにアクセスできるようにする -->
             </ul>
         </nav>
+        <img src="click.png" alt="hukidasi" class="app-bar__badge">
     </header>
 
-    <main class="content">
-        <p class="welcome-text">
-            このサイトは野々市市が問題視しているデジタルディバイト問題における
-            情報格差の解消を目的として立ち上げた金沢工業大学の学生によるアンケートサイトです。<br>
-            ウェブアプリケーションの基礎を詰め込んだものとなっていますので、ぜひご利用ください！
-        </p>
-        </main>
 
     <footer>
         <p>&copy; 2025 アンケートサイト</p>
