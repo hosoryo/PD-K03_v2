@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../auth_bootstrap.php';
 
-// ★ ログイン必須
+//  ログイン必須
 require_login();
 
 $pdo = get_pdo();
@@ -70,7 +70,7 @@ $avatarInitial = function_exists('mb_substr')
   .btn { display:inline-block; padding:8px 12px; border-radius:8px; background:var(--accent); color:#fff; text-decoration:none; font-size:14px; border:none; cursor:pointer; }
   .btn.secondary { background:#fff; color:var(--accent); border:1px solid #dbeafe; }
 
-  /* ★ ログアウトボタン（赤） */
+  /*  ログアウトボタン（赤） */
   .btn.logout-btn {
     background:#e11d48;
     color:#fff;
@@ -105,7 +105,7 @@ $avatarInitial = function_exists('mb_substr')
 
     <main class="grid">
 
-      <!-- ▼ LEFT main card -->
+      <!-- LEFT main card -->
       <section class="card">
 
         <div class="profile">
@@ -199,7 +199,7 @@ document.getElementById('btnExchange').addEventListener('click', () => {
   document.getElementById('modal').classList.add('show');
 });
 
-// ▼ マイページに localStorage の履歴を表示する処理
+// マイページに localStorage の履歴を表示する処理
 document.addEventListener('DOMContentLoaded', () => {
   const list = document.getElementById('mypageHistoryList');
   if (!list) return;
