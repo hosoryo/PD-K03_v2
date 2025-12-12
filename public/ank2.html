@@ -72,11 +72,9 @@
         .return-btn { background-color: #6c757d; }
         
         #thankYouMessage { text-align: center; font-size: 2em; color: #008000; margin-top: 50px; display: none; font-weight: bold; }
- 
-        .container { position: relative; }
-
-    .return-link { text-align: right; max-width: 950px; margin: 0 auto 20px; }
-    .return-link a { display: inline-block; padding: 12px 20px; margin-top: 16px; background-color:#6c757d; color:#fff; border-radius:6px; font-weight:bold; font-size:1.1em; text-decoration:none; }
+        
+        .return-link { text-align: right; max-width: 950px; margin: 0 auto 20px; }
+        .return-link a { display: inline-block; padding: 12px 20px; margin-top: 16px; background-color:#6c757d; color:#fff; border-radius:6px; font-weight:bold; font-size:1.1em; text-decoration:none; }
 
     </style>
 </head>
@@ -259,12 +257,12 @@
         // --- イベントリスナー ---
         document.getElementById('closeFormBtn').addEventListener('click', initializeSurveyList);
 
-        document.getElementById('surveyForm').addEventListener('submit', function(event) {
+        document.getElementById('surveyForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            const surveyId = document.getElementById('surveyId').value;
-            const surveyName = document.getElementById('surveyName').value;
-            const surveyPoints = document.getElementById('surveyPoints').value;
+            const surveyId     = document.getElementById('surveyId').value;
+            const surveyName   = document.getElementById('surveyName').value;
+            const surveyPoints = parseInt(document.getElementById('surveyPoints').value, 10);
             
             // 回答内容を収集
             const answers = [];
@@ -278,11 +276,48 @@
                 }
             }
 
+            try {
+                const resp = await fetch('/survey_submit.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        surveyId,
+                        surveyName,
+                        surveyPoints,
+                        answers,
+                    }),
+                });
+
+                if (!resp.ok) {
+                    alert('サーバーへの送信に失敗しました。もう一度お試しください。');
+                    return;
+                }
+
+                const json = await resp.json();
+                if (!json.ok) {
+                    alert('ポイント加算に失敗しました: ' + (json.error || 'unknown'));
+                    return;
+                }
+
+        // 必要なら json.newPoints を使って「現在ポイント: xxxpt」など表示してもOK
+                console.log('新しい合計ポイント:', json.newPoints);
+
+            } catch (e) {
+                console.error(e);
+                alert('通信エラーが発生しました。ネットワークを確認してください。');
+                return;
+            }
+
+    //  サーバー側がOKだったら、これまで通り履歴登録＆サンクス画面へ
+            handleSuccessfulSubmission(surveyId, surveyName, surveyPoints, answers);
+    });
+
             // Javaサーバーへの送信を模擬
             setTimeout(() => {
                 handleSuccessfulSubmission(surveyId, surveyName, surveyPoints, answers);
             }, 500);
-        });
 
         function handleSuccessfulSubmission(id, name, points, answers) {
             // 履歴ページにデータを追加する処理 (JavaScriptで模擬)
