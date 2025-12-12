@@ -1,117 +1,79 @@
-/* ==================================== */
-/* 1. 基本設定 (Base Styles) */
-/* ==================================== */
-body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-image: url('homebackground.jpg'); 
-    background-size: cover;                        
-    background-position: center;                   
-    background-repeat: no-repeat;                  
-    background-attachment: fixed;                  
-    
-    background-color: #f8f9fa; 
-    color: #ffffff;
-    line-height: 1.6;
+const express = require("express");
+const bodyParser = require("body-parser");
+const fs = require("fs");
+const app = express();
+
+app.set("view engine", "ejs");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+
+// ユーザーデータ保存ファイル
+const USERS_FILE = "users.json";
+
+// ファイル初期化（存在しない場合は作成）
+if (!fs.existsSync(USERS_FILE)) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify([]));
 }
 
+// ホーム → ログイン画面
+app.get("/", (req, res) => {
+  res.render("login");
+});
 
-.content {
+// ログイン処理
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const users = JSON.parse(fs.readFileSync(USERS_FILE));
 
-    background-color: rgba(255, 255, 255, 0.85); 
-    max-width: 1200px;
-    margin: 20px auto; 
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(252, 252, 252, 0.2);
-    min-height: 60vh;
-}
+  const user = users.find((u) => u.username === username && u.password === password);
+  if (user) {
+    res.render("success", { user: username });
+  } else {
+    res.send("ログイン失敗：ユーザー名またはパスワードが違います。<br><a href='/'>戻る</a>");
+  }
+});
 
-/* ==================================== */
-/* 2. ヘッダー (App Bar) */
-/* ==================================== */
-.app-bar {
-    background-color: #2c3e50;
-    color: white;
-    padding: 10px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
-}
+// 新規登録画面
+app.get("/register", (req, res) => {
+  res.render("register");
+});
 
-.app-bar h1 {
-    font-size: 1.8em;
-    margin: 0;
-}
+// 新規登録処理
+app.post("/register", (req, res) => {
+  const { username, password } = req.body;
+  const users = JSON.parse(fs.readFileSync(USERS_FILE));
 
-/* ==================================== */
-/* 3. ナビゲーション (Nav) */
-/* ==================================== */
-.nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-}
+  // 重複チェック
+  if (users.find((u) => u.username === username)) {
+    return res.send("このユーザー名はすでに使われています。<br><a href='/register'>戻る</a>");
+  }
 
-.nav li {
-    margin-left: 25px;
-}
+  users.push({ username, password });
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  res.send("登録完了！<br><a href='/'>ログイン画面へ戻る</a>");
+});
 
-.nav a {
-    color: white;
-    padding: 10px 12px;
-    border-radius: 5px;
-    transition: background-color 0.3s, transform 0.1s; 
-}
+// パスワード再設定画面
+app.get("/forgot", (req, res) => {
+  res.render("forgot");
+});
 
-.nav a:hover {
-    background-color: #34495e; 
-    text-decoration: none;
-}
+// パスワード再設定処理
+app.post("/forgot", (req, res) => {
+  const { username, newpassword } = req.body;
+  const users = JSON.parse(fs.readFileSync(USERS_FILE));
 
-.nav a:active {
-    transform: translateY(1px);
-}
+  const user = users.find((u) => u.username === username);
+  if (!user) {
+    return res.send("そのユーザー名は登録されていません。<br><a href='/forgot'>戻る</a>");
+  }
 
-/* ==================================== */
-/* 4. メインコンテンツ (Main Content) */
-/* ==================================== */
-.content {
-  display: flex;
-  align-items: flex-end;    
-  justify-content: center;    
-  background-color: transparent;
-  text-align: center;
-  font-size: 32px;
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 160px;
-  box-shadow: none;
-  border-radius: 0;
-  min-height: 60vh;
-  color: #0075ea;           
-  -webkit-text-stroke: 1px #000;        
-}
+  user.password = newpassword;
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  res.send("パスワードを更新しました！<br><a href='/'>ログイン画面へ戻る</a>");
+});
 
-
-/* ==================================== */
-/* 5. フッター (Footer) */
-/* ==================================== */
-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  background-color: #7f8c8d;
-  color: white;
-  text-align: center;
-  padding: 15px 0;
-}
-
-.content {
-  padding-bottom: 70px; 
-}
+// サーバー起動
+app.listen(3000, () => {
+  console.log("サーバー起動中: http://localhost:3000");
+});
