@@ -13,31 +13,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'ユーザー名とパスワードを入力してください。';
     } else {
 
-      // パスワードのセキュリティチェック
-      if (strlen($password) < 6) {
-        $error = 'パスワードは6文字以上で入力してください。';
-      } elseif (!preg_match('/[A-Za-z]/', $password)) {
-        $error = 'パスワードに英字を含めてください。';
-      } elseif (!preg_match('/[0-9]/', $password)) {
-        $error = 'パスワードに数字を含めてください。';
-      } 
+        // ▼ パスワードのセキュリティチェック ▼
+        if (strlen($password) < 6) {
+            $error = 'パスワードは6文字以上で入力してください。';
+        } elseif (!preg_match('/[A-Za-z]/', $password)) {
+            $error = 'パスワードに英字を含めてください。';
+        } elseif (!preg_match('/[0-9]/', $password)) {
+            $error = 'パスワードに数字を含めてください。';
+        }
+        // ▲ ここまでパスワードチェック ▲
 
-        $pdo = get_pdo();
+        // ★ エラーがある場合は処理を止める（DB登録へ進まない）
+        if ($error === '') {
 
-        // 同名ユーザーが存在するか確認
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt->execute([$username]);
-        $exists = $stmt->fetchColumn();
+            $pdo = get_pdo();
 
-        if ($exists) {
-            $error = 'このユーザー名は既に使用されています。';
-        } else {
-            // 登録処理
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-            $stmt->execute([$username, $hash]);
+            // 既に同じユーザー名があるかチェック
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            $exists = $stmt->fetchColumn();
 
-            $success = '登録が完了しました。ログインしてください。';
+            if ($exists) {
+                $error = 'このユーザー名は既に使用されています。';
+            } else {
+                // 登録処理
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
+                $stmt->execute([$username, $hash]);
+
+                $success = '登録が完了しました。ログインしてください。';
+            }
         }
     }
 }
@@ -61,21 +66,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <p style="color:green; font-size: 18px; text-align:center;"><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></p>
   <?php endif; ?>
 
-  <form action="/register.php" method="POST" 
-        style="max-width: 380px; margin: 0 auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px;">
+  <form action="/register.php" method="POST"
+        style="max-width: 380px; margin: 0 auto; border: 1px solid #ccc;
+               padding: 20px; border-radius: 10px;">
 
     <label style="font-size: 18px;">ユーザー名:</label><br>
     <input type="text" name="username" required
-           style="width: 100%; font-size: 18px; padding: 8px; margin-top: 5px; margin-bottom: 15px;"><br>
+           style="width: 100%; font-size: 18px; padding: 8px;
+                  margin-top: 5px; margin-bottom: 15px;"><br>
 
     <label style="font-size: 18px;">パスワード:</label><br>
-    <span style="font-size: 12px; color: #555;">（6文字以上・英字と数字を含めてください）</span><br>
+    <span style="font-size: 12px; color: #555;">
+      （6文字以上・英字と数字を含めてください）
+    </span><br>
     <input type="password" name="password" required
-           style="width: 100%; font-size: 18px; padding: 8px; margin-top: 5px; margin-bottom: 20px;"><br>
+           style="width: 100%; font-size: 18px; padding: 8px;
+                  margin-top: 5px; margin-bottom: 20px;"><br>
 
     <button type="submit"
-            style="width: 100%; padding: 12px; font-size: 18px; border-radius: 8px; cursor: pointer;">
-        登録
+            style="width: 100%; padding: 12px; font-size: 18px;
+                   border-radius: 8px; cursor: pointer;">
+      登録
     </button>
   </form>
 

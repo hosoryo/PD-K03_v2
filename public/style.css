@@ -1,79 +1,179 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const fs = require("fs");
-const app = express();
-
-app.set("view engine", "ejs");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static("public"));
-
-// ユーザーデータ保存ファイル
-const USERS_FILE = "users.json";
-
-// ファイル初期化（存在しない場合は作成）
-if (!fs.existsSync(USERS_FILE)) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+/* ==================================== */
+/* 1. 基本設定 (Base Styles) */
+/* ==================================== */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-image: url('homebackground.jpg'); 
+    background-size: cover;                        
+    background-position: center;                   
+    background-repeat: no-repeat;                  
+    background-attachment: fixed;                  
+    
+    background-color: #f8f9fa; 
+    color: #ffffff;
+    line-height: 1.6;
 }
 
-// ホーム → ログイン画面
-app.get("/", (req, res) => {
-  res.render("login");
-});
 
-// ログイン処理
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  const users = JSON.parse(fs.readFileSync(USERS_FILE));
+.content {
 
-  const user = users.find((u) => u.username === username && u.password === password);
-  if (user) {
-    res.render("success", { user: username });
-  } else {
-    res.send("ログイン失敗：ユーザー名またはパスワードが違います。<br><a href='/'>戻る</a>");
+    background-color: rgba(255, 255, 255, 0.85); 
+    max-width: 1200px;
+    margin: 20px auto; 
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(252, 252, 252, 0.2);
+    min-height: 60vh;
+}
+
+/* ==================================== */
+/* 2. ヘッダー (App Bar) */
+/* ==================================== */
+.app-bar {
+    background-color: #2c3e50;
+    color: white;
+    padding: 18px 40px;
+    min-height: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.app-bar h1 {
+    font-size: 2.2em;
+    margin: 0;
+    line-height: 1;
+}
+
+.nav a {
+  color: white;
+  font-size: 1.20rem; 
+  padding: 20px 24px; 
+  border-radius: 6px;
+  transition: background-color 0.3s, transform 0.1s;
+}
+
+
+@media (max-width: 600px) {
+  .app-bar {
+    padding: 12px 16px;
+    min-height: 56px;
   }
-});
-
-// 新規登録画面
-app.get("/register", (req, res) => {
-  res.render("register");
-});
-
-// 新規登録処理
-app.post("/register", (req, res) => {
-  const { username, password } = req.body;
-  const users = JSON.parse(fs.readFileSync(USERS_FILE));
-
-  // 重複チェック
-  if (users.find((u) => u.username === username)) {
-    return res.send("このユーザー名はすでに使われています。<br><a href='/register'>戻る</a>");
+  .app-bar h1 {
+    font-size: 1.4em;
   }
-
-  users.push({ username, password });
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  res.send("登録完了！<br><a href='/'>ログイン画面へ戻る</a>");
-});
-
-// パスワード再設定画面
-app.get("/forgot", (req, res) => {
-  res.render("forgot");
-});
-
-// パスワード再設定処理
-app.post("/forgot", (req, res) => {
-  const { username, newpassword } = req.body;
-  const users = JSON.parse(fs.readFileSync(USERS_FILE));
-
-  const user = users.find((u) => u.username === username);
-  if (!user) {
-    return res.send("そのユーザー名は登録されていません。<br><a href='/forgot'>戻る</a>");
+  .nav a {
+    padding: 8px 10px;
   }
+}
 
-  user.password = newpassword;
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  res.send("パスワードを更新しました！<br><a href='/'>ログイン画面へ戻る</a>");
-});
+@media (max-width: 600px) {
+  .nav a { font-size: 1rem; padding: 10px 12px; }
+  .app-bar { min-height: 64px; padding: 12px 16px; }
+}
 
-// サーバー起動
-app.listen(3000, () => {
-  console.log("サーバー起動中: http://localhost:3000");
-});
+
+/* ==================================== */
+/* 3. ナビゲーション (Nav) */
+/* ==================================== */
+.nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+.nav li {
+    margin-left: 25px; 
+}
+
+.nav a {
+    color: white;
+    padding: 10px 12px;
+    border-radius: 5px;
+    transition: background-color 0.3s, transform 0.1s; 
+}
+
+.nav a:hover {
+    background-color: #34495e; 
+    text-decoration: none;
+}
+
+.nav a:active {
+    transform: translateY(1px);
+}
+.app-bar {
+  position: relative; 
+}
+.app-bar {
+  position: relative;
+}
+
+
+
+
+/* ==================================== */
+/* 4. メインコンテンツ (Main Content) */
+/* ==================================== */
+.content {
+background-color: transparent; 
+ 
+max-width: 1200px;
+margin: 20px auto; 
+padding: 20px; 
+ 
+
+box-shadow: none; 
+border-radius: 0;
+ 
+min-height: 60vh;
+}
+.app-bar__badge {
+  position: absolute;
+  right: 16px;
+  top: calc(100% + 24px);
+  width: 250px;
+  height: auto;
+  z-index: 10;
+}
+
+
+@media (max-width: 600px) {
+  .app-bar__badge {
+    display: none;
+  }
+}
+
+.tooltip{position:relative}
+.tooltip::after{
+  content:attr(data-tip);
+  position:absolute;
+  top:120%;
+  left:50%;
+  transform:translateX(-50%);
+  background:#333;color:#fff;padding:6px 8px;border-radius:4px;opacity:0;transition:.15s;
+  pointer-events:none; white-space:nowrap;
+}
+.tooltip:hover::after{opacity:1}
+
+/* ==================================== */
+/* 5. フッター (Footer) */
+/* ==================================== */
+footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background-color: #7f8c8d;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+}
+
+.content {
+  padding-bottom: 70px; 
+}

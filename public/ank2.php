@@ -1,0 +1,352 @@
+<?php
+declare(strict_types=1);                 // ★ 追加
+require __DIR__ . '/../auth_bootstrap.php'; // ★ 追加（あなたの環境に合わせて）
+require_login();                         // ★ 追加（ログイン必須にする）
+$userId = (int)($_SESSION['user_id'] ?? 0); // ★ 追加（JSに渡す）
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">アンケート回答</title>
+    <style>
+        /* 履歴画面 rire2.html に近い、簡素で視認性の高いスタイルを適用 */
+        body { font-family: 'Meiryo', 'Yu Gothic', sans-serif; margin: 25px; background-color: #f0f0f0; font-size: 110%; color: #000000; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        h1 { color: #1a1a1a; text-align: center; font-size: 2.2em; margin-bottom: 30px; }
+        
+        .header-links { text-align: right; margin-bottom: 20px; }
+        .header-links a { padding: 10px 18px; text-decoration: none; color: white; border-radius: 6px; margin-left: 15px; font-weight: bold; font-size: 1em; }
+        .header-links .history-btn { background-color: #0056b3; } 
+        .header-links .create-btn { background-color: #008000; } 
+
+        /* === アンケート一覧 (履歴リストと同じ形式) === */
+        .history-list { list-style: none; padding: 0; max-width: 900px; margin: 20px auto; }
+        .survey-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px 25px; 
+            margin-bottom: 12px; 
+            background-color: #f8f8f8; 
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        .survey-item:hover { background-color: #e8e8e8; }
+        .survey-name { flex-grow: 1; color: #000000; font-size: 1.1em; padding: 0 15px; }
+        .survey-point {
+            font-weight: bold;
+            color: #ff8c00; /* ポイントを強調 */
+            width: 15%; 
+            font-size: 1.1em; 
+            flex-shrink: 0;
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        /* === 回答フォームパネル (詳細表示) === */
+        #formPanel {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 30px;
+            background-color: #f0f0f0;
+            border: 3px solid #0056b3; 
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-size: 1.1em;
+            display: none; /* 初期状態では非表示 */
+        }
+        #formPanel h2 {
+            color: #0056b3;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .question-group { 
+            margin-bottom: 15px;
+            padding: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #ffffff;
+        }
+        label { display: block; font-weight: bold; margin-bottom: 10px; font-size: 1.1em; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #777; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        
+        .submit-btn, .return-btn { display: block; width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 6px; font-size: 1.2em; cursor: pointer; margin-top: 25px; font-weight: bold; }
+        .return-btn { background-color: #6c757d; }
+        
+        #thankYouMessage { text-align: center; font-size: 2em; color: #008000; margin-top: 50px; display: none; font-weight: bold; }
+        
+        .return-link { text-align: right; max-width: 950px; margin: 0 auto 20px; }
+        .return-link a { display: inline-block; padding: 12px 20px; margin-top: 16px; background-color:#6c757d; color:#fff; border-radius:6px; font-weight:bold; font-size:1.1em; text-decoration:none; }
+
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContainer">
+        <div class="header-links">
+            <a href="rire2.php" class="history-btn">履歴</a> <!-- ★ .phpに変更 -->
+            <a href="sakusei.html" class="create-btn">作成</a>
+        </div>
+        
+        <h1 id="mainHeader">回答可能なアンケート一覧</h1>
+
+        <ul class="history-list" id="surveyList">
+            </ul>
+        
+        <div id="formPanel">
+            <h2 id="formPanelTitle"></h2>
+            <p id="formPanelPoints" style="font-weight: bold; color: #ff8c00; margin-bottom: 20px;"></p>
+            
+            <form id="surveyForm">
+                <div id="questionsContainer">
+                    </div>
+                
+                <input type="hidden" name="surveyId" id="surveyId">
+                <input type="hidden" name="surveyName" id="surveyName">
+                <input type="hidden" name="surveyPoints" id="surveyPoints"> 
+
+                <button type="submit" class="submit-btn">回答を送信する</button>
+            </form>
+            <button id="closeFormBtn" class="return-btn" style="margin-top: 15px;">一覧に戻る</button>
+        </div>
+    </div>
+    <div class="return-link">
+    <a href="index.html" aria-label="ホームに戻る">← ホームに戻る</a>
+    </div>
+    
+    <div id="thankYouMessage">
+        回答ありがとうございました。
+        <button class="return-btn" onclick="window.location.href='ank2.php'">アンケート一覧に戻る</button> <!-- ★ .phpに変更 -->
+    </div>
+
+    <script>
+        // ★ 追加：ログインユーザーごとに履歴キーを分ける
+        const CURRENT_USER_ID = <?= (int)$userId ?>;
+        const HISTORY_KEY = 'surveyHistory_' + CURRENT_USER_ID;
+
+        // --- 模擬データ: アンケートの種類 ---
+        const SURVEY_DATA = {
+            "001": {
+                name: "2025年10月度顧客満足度調査",
+                points: 100,
+                questions: [
+                    { id: "q1", text: "Q1. サービスの満足度をご記入ください (5段階評価)", type: "text" },
+                    { id: "q2", text: "Q2. 改善してほしい点を自由にご記入ください", type: "text" }
+                ]
+            },
+            "002": {
+                name: "製品Aの利用実態に関するアンケート",
+                points: 50,
+                questions: [
+                    { id: "q1", text: "Q1. 製品Aの主な利用目的は何ですか？", type: "text" },
+                    { id: "q2", text: "Q2. 製品Aの利用頻度を教えてください", type: "text" }
+                ]
+            },
+            "003": {
+                name: "新商品コンセプトに関するアンケート",
+                points: 200,
+                questions: [
+                    { id: "q1", text: "Q1. 新商品コンセプトに対する期待度を教えてください。", type: "text" },
+                    { id: "q2", text: "Q2. どの機能に最も魅力を感じますか？", type: "text" },
+                    { id: "q3", text: "Q3. 許容できる価格帯を教えてください。", type: "text" }
+                ]
+            }
+        };
+
+        // ローカルストレージを履歴データの模擬として使用
+        // ★ 'surveyHistory' → HISTORY_KEY に変更
+        if (!localStorage.getItem(HISTORY_KEY)) {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+        }
+
+        const surveyListElement = document.getElementById('surveyList');
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY)); // ★
+        const answeredIds = new Set(history.map(item => item.id));
+
+        // --- 画面初期化: アンケート一覧の表示 ---
+        function initializeSurveyList() {
+            surveyListElement.innerHTML = ''; // リストをクリア
+            document.getElementById('formPanel').style.display = 'none';
+            document.getElementById('surveyList').style.display = 'block';
+            document.getElementById('mainHeader').textContent = '回答可能なアンケート一覧';
+
+            let availableSurveys = Object.entries(SURVEY_DATA);
+
+            /*
+            // === ユーザー要望(一時保留): 一度答えたアンケートを非表示にするロジック ===
+            // 今回のテストに限りアンケートが残るようにするため、フィルタリングはコメントアウトする。
+            // 実際にフィルタリングを行う場合は、以下の行を有効にする。
+            availableSurveys = availableSurveys.filter(([id]) => !answeredIds.has(id));
+            */
+
+            if (availableSurveys.length === 0) {
+                surveyListElement.innerHTML = '<li class="survey-item" style="justify-content: center; color: #555; cursor: default;">現在、回答可能なアンケートはありません。</li>';
+                return;
+            }
+
+            // ヘッダーを追加
+            const headerItem = document.createElement('li');
+            headerItem.classList.add('survey-item');
+            headerItem.style.backgroundColor = '#e0e0e0';
+            headerItem.style.fontWeight = 'bold';
+            headerItem.style.cursor = 'default';
+            headerItem.style.boxShadow = 'none';
+            headerItem.innerHTML = `
+                <span class="survey-name" style="padding-left: 15px;">アンケート名</span>
+                <span class="survey-point" style="padding-right: 15px;">獲得ポイント</span>
+            `;
+            surveyListElement.appendChild(headerItem);
+            
+            // アンケートリストを生成
+            availableSurveys.forEach(([id, survey]) => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('survey-item');
+                listItem.setAttribute('data-id', id);
+
+                // 項目を押すと詳細（フォーム）が出るようにする
+                listItem.onclick = () => loadSurveyForm(id); 
+
+                const nameSpan = document.createElement('span');
+                nameSpan.classList.add('survey-name');
+                nameSpan.textContent = survey.name;
+
+                // アンケート毎に設定されたポイントを表記する
+                const pointSpan = document.createElement('span');
+                pointSpan.classList.add('survey-point');
+                pointSpan.textContent = survey.points + ' Pt'; 
+
+                listItem.appendChild(nameSpan);
+                listItem.appendChild(pointSpan);
+                
+                surveyListElement.appendChild(listItem);
+            });
+        }
+
+        // --- アンケート回答フォームの表示 ---
+        function loadSurveyForm(surveyId) {
+            const survey = SURVEY_DATA[surveyId];
+            if (!survey) {
+                alert("指定されたアンケートが見つかりません。");
+                return;
+            }
+
+            const formPanel = document.getElementById('formPanel');
+            const questionsContainer = document.getElementById('questionsContainer');
+            
+            // 画面の切り替え
+            document.getElementById('surveyList').style.display = 'none';
+            formPanel.style.display = 'block';
+            document.getElementById('mainHeader').textContent = '回答フォーム';
+
+            // フォームパネルの情報を更新
+            document.getElementById('formPanelTitle').textContent = survey.name;
+            document.getElementById('formPanelPoints').textContent = `獲得予定ポイント: ${survey.points} ポイント`;
+            document.getElementById('surveyId').value = surveyId;
+            document.getElementById('surveyName').value = survey.name;
+            document.getElementById('surveyPoints').value = survey.points;
+
+            // 質問を動的に生成
+            questionsContainer.innerHTML = ''; 
+            survey.questions.forEach(q => {
+                const questionGroup = document.createElement('div');
+                questionGroup.classList.add('question-group');
+                questionGroup.innerHTML = `
+                    <label for="${q.id}">${q.text}</label>
+                    <input type="${q.type}" id="${q.id}" name="${q.id}" required>
+                `;
+                questionsContainer.appendChild(questionGroup);
+            });
+
+            // パネルの先頭にスクロール
+            formPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+
+        // --- イベントリスナー ---
+        document.getElementById('closeFormBtn').addEventListener('click', initializeSurveyList);
+
+        document.getElementById('surveyForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const surveyId     = document.getElementById('surveyId').value;
+            const surveyName   = document.getElementById('surveyName').value;
+            const surveyPoints = parseInt(document.getElementById('surveyPoints').value, 10);
+            
+            // 回答内容を収集
+            const answers = [];
+            const formElements = event.target.elements;
+            for (let i = 0; i < formElements.length; i++) {
+                const element = formElements[i];
+                // text, number, textareaなど、入力が必要な要素のみを収集
+                if ((element.type === 'text' || element.type === 'number' || element.type === 'textarea') && element.name) {
+                    const questionText = document.querySelector(`label[for="${element.id}"]`) ? document.querySelector(`label[for="${element.id}"]`).textContent : element.name;
+                    answers.push({ question: questionText, answer: element.value });
+                }
+            }
+
+            try {
+                const resp = await fetch('/survey_submit.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        surveyId,
+                        surveyName,
+                        surveyPoints,
+                        answers,
+                    }),
+                });
+
+                if (!resp.ok) {
+                    alert('サーバーへの送信に失敗しました。もう一度お試しください。');
+                    return;
+                }
+
+                const json = await resp.json();
+                if (!json.ok) {
+                    alert('ポイント加算に失敗しました: ' + (json.error || 'unknown'));
+                    return;
+                }
+
+        // 必要なら json.newPoints を使って「現在ポイント: xxxpt」など表示してもOK
+                console.log('新しい合計ポイント:', json.newPoints);
+
+            } catch (e) {
+                console.error(e);
+                alert('通信エラーが発生しました。ネットワークを確認してください。');
+                return;
+            }
+
+    // ★ サーバー側がOKだったら、これまで通り履歴登録＆サンクス画面へ
+            handleSuccessfulSubmission(surveyId, surveyName, surveyPoints, answers);
+    });
+
+
+        function handleSuccessfulSubmission(id, name, points, answers) {
+            // 履歴ページにデータを追加する処理 (JavaScriptで模擬)
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)); // ★
+
+            const newEntry = { 
+                id: id, 
+                name: name, 
+                date: new Date().toLocaleDateString(),
+                point: points,
+                answers: answers 
+            };
+            history.push(newEntry);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); // ★
+            
+            // メッセージ表示とフォーム非表示
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('thankYouMessage').style.display = 'block'; 
+        }
+        
+        // ページロード時に実行
+        initializeSurveyList();
+    </script>
+</body>
+</html>

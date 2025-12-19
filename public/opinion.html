@@ -11,7 +11,7 @@
     input, textarea, button{width:100%; padding:10px; box-sizing:border-box}
     button{cursor:pointer}
 
-    .return-link { text-align: right; max-width: 950px; margin: 0 auto 20px; }
+        .return-link { text-align: right; max-width: 950px; margin: 0 auto 20px; }
     .return-link a { display: inline-block; padding: 12px 20px; margin-top: 16px; background-color:#6c757d; color:#fff; border-radius:6px; font-weight:bold; font-size:1.1em; text-decoration:none; }
 
     .return-link a {
@@ -29,6 +29,7 @@
       top: 80px;
     }
     
+
        /* ===== ここからモバイル用設定 ===== */
 
     /*  OSのフォーム拡大防止 */
@@ -68,7 +69,6 @@
     .section-header{font-size: clamp(20px, 6vw, 28px); margin-bottom: 12px;text-align: center;}
 
     /* ===== スマホ用設定ここまで ===== */
-    
   </style>
 </head>
 <body>
@@ -92,15 +92,12 @@
         <textarea rows="8" id="message" name="message" placeholder="ご意見" required></textarea>
       </div>
 
-      <div class="return-link">
-      <a href="index.html" aria-label="ホームに戻る">← ホームに戻る</a>
-      </div>
-
-
       <button id="submit" type="submit" value="SEND">
         送信
       </button>
-      
+      <div class="return-link">
+      <a href="index.html" aria-label="ホームに戻る">← ホームに戻る</a>
+      </div>
     </form>
   </div>
 </section>

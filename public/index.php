@@ -20,13 +20,13 @@ require_login();
         
         <nav class="nav">
             <ul>
-                <li><a href="index.php">ホーム</a></li>
-                <li><a href="ank2.html">アンケートページ</a></li> 
-                <li><a href="mypage.php">マイページ</a></li>
-                <li><a href="opinion.html">意見箱</a></li>
-                <li><a href="rire2.html">履歴</a></li>
-                <li><a href="exchange.html">景品交換はこちら</a></li>
-                <li><a href="logout.php">ログアウト</a></li>
+                <li><a href="index.php" class="tooltip" data-tip="ホーム画面に移る">ホーム</a></li>
+                <li><a href="ank2.php" class="tooltip" data-tip="アンケートに回答できます">アンケートページ</a></li>
+                <li><a href="mypage.php" class="tooltip" data-tip="アカウント情報や保有しているポイントを確認できます">マイページ</a></li>
+                <li><a href="opinion.html" class="tooltip" data-tip="アプリに関する意見はこちらへ">意見箱</a></li>
+                <li><a href="rire2.php" class="tooltip" data-tip="過去に回答したアンケートを確認できます">履歴</a></li>
+                <li><a href="exchange.php" class="tooltip" data-tip="ポイントを利用して景品と交換することができます">景品交換はこちら</a></li>
+                <li><a href="logout.php" class="tooltip" data-tip="ログアウトはこちら">ログアウト</a></li>
                 <!-- 後ほどページにアクセスできるようにする -->
             </ul>
         </nav>

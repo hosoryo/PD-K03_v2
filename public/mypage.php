@@ -2,12 +2,10 @@
 declare(strict_types=1);
 require __DIR__ . '/../auth_bootstrap.php';
 
-//  ログイン必須
 require_login();
 
 $pdo = get_pdo();
 
-// ログイン中ユーザーの情報取得
 $stmt = $pdo->prepare("
     SELECT id,
            username,
@@ -25,15 +23,35 @@ if (!$user) {
     exit;
 }
 
-// 表示用
 $displayName = $user['username'];
 $username    = $user['username'];
-$points      = (int)$user['points'];
+$points      = (int)$user['points']; 
 $userId      = (int)$user['id'];
 $createdAt   = $user['created_at'] ?? '';
+
 $avatarInitial = function_exists('mb_substr')
     ? mb_substr($displayName, 0, 1, 'UTF-8')
     : substr($displayName, 0, 1);
+
+$stmt = $pdo->prepare("
+  SELECT
+    survey_name AS name,
+    strftime('%Y/%m/%d', created_at) AS date,
+    points AS point
+  FROM survey_history
+  WHERE user_id = ?
+  ORDER BY id ASC
+");
+$stmt->execute([$userId]);
+$dbHistory = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+$stmt = $pdo->prepare("
+  SELECT COALESCE(SUM(points), 0) AS total_point
+  FROM survey_history
+  WHERE user_id = ?
+");
+$stmt->execute([$userId]);
+$dbTotalPoint = (int)$stmt->fetchColumn();
 ?>
 <!doctype html>
 <html lang="ja">
@@ -49,7 +67,20 @@ $avatarInitial = function_exists('mb_substr')
 
   header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
   h1 { margin:0; font-size:20px; }
-  nav a { color:var(--accent); text-decoration:none; margin-left:12px; font-size:14px; }
+  nav a { text-decoration:none; }
+
+  .home-btn {
+    display:inline-block;
+    padding:10px 18px;
+    background:#2563eb;
+    color:#fff;
+    border-radius:8px;
+    font-size:15px;
+    font-weight:600;
+    text-decoration:none;
+  }
+  .home-btn:hover { background:#1e4fc9; }
+  .home-btn:active { transform:translateY(1px); }
 
   .grid { display:grid; grid-template-columns: 1fr 320px; gap:20px; align-items:start; }
   .card { background:var(--card); padding:18px; border-radius:12px; box-shadow:0 6px 18px rgba(17,24,39,0.06); }
@@ -58,8 +89,19 @@ $avatarInitial = function_exists('mb_substr')
   .avatar { width:64px; height:64px; border-radius:50%; background:#e6eefc; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--accent); font-size:24px; }
   .userinfo { flex:1; }
 
-  .points { text-align:right; }
-  .points .num { font-size:24px; font-weight:700; color:var(--accent); }
+  .points-block { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .points-label { color:var(--muted); font-size:12px; }
+  .points-num { font-size:24px; font-weight:700; color:var(--accent); }
+
+  .earned-points {
+    font-size:13px;
+    color:var(--muted);
+  }
+  .earned-points span {
+    font-weight:700;
+    color:var(--success);
+    font-size:15px;
+  }
 
   h2 { margin:0 0 12px 0; font-size:16px; }
 
@@ -70,12 +112,7 @@ $avatarInitial = function_exists('mb_substr')
   .btn { display:inline-block; padding:8px 12px; border-radius:8px; background:var(--accent); color:#fff; text-decoration:none; font-size:14px; border:none; cursor:pointer; }
   .btn.secondary { background:#fff; color:var(--accent); border:1px solid #dbeafe; }
 
-  /*  ログアウトボタン（赤） */
-  .btn.logout-btn {
-    background:#e11d48;
-    color:#fff;
-    border:none;
-  }
+  .btn.logout-btn { background:#e11d48; color:#fff; border:none; }
   .btn.logout-btn:hover { opacity:.9; }
   .btn.logout-btn:active { transform:translateY(1px); }
 
@@ -83,10 +120,9 @@ $avatarInitial = function_exists('mb_substr')
 
   @media (max-width:900px) {
     .grid { grid-template-columns:1fr; }
-    .points { text-align:left; margin-top:8px; }
+    .points-block { align-items:flex-start; margin-top:8px; }
   }
 
-  /* simple modal */
   .modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); padding:20px; visibility:hidden; opacity:0; transition:.18s; }
   .modal.show { visibility:visible; opacity:1; }
   .modal .box { width:100%; max-width:520px; background:#fff; border-radius:10px; padding:18px; }
@@ -101,11 +137,13 @@ $avatarInitial = function_exists('mb_substr')
         <h1>アンケート＆ポイント - マイページ</h1>
         <div class="muted">ユーザー専用ページ｜ポイント・回答履歴</div>
       </div>
+      <nav>
+        <a href="/index.php" class="home-btn">ホームへ戻る</a>
+      </nav>
     </header>
 
     <main class="grid">
 
-      <!-- LEFT main card -->
       <section class="card">
 
         <div class="profile">
@@ -113,7 +151,7 @@ $avatarInitial = function_exists('mb_substr')
             <?php echo htmlspecialchars($avatarInitial, ENT_QUOTES, 'UTF-8'); ?>
           </div>
           <div class="userinfo">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
                 <div style="font-weight:700; font-size:16px">
                   <?php echo htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8'); ?>
@@ -124,57 +162,48 @@ $avatarInitial = function_exists('mb_substr')
                 <?php endif; ?>
               </div>
 
-              <div class="points">
-                <div class="muted">保有ポイント</div>
-                <div class="num"><?php echo $points; ?> pt</div>
+              <div class="points-block">
+                <div>
+                  <div class="points-label">現在の保有ポイント</div>
+                  <div class="points-num"><?php echo $points; ?> pt</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ログアウトボタン -->
         <div style="text-align:right; margin-top:12px;">
           <a href="/logout.php" class="btn logout-btn">ログアウト</a>
         </div>
 
         <hr style="margin:14px 0; border:none; border-top:1px solid #eef2ff;">
 
-        <!-- ▼ ここが履歴連携部分 -->
         <h2>アンケート履歴</h2>
-        <div class="muted" style="margin-bottom:8px;">
-          ※ このブラウザで回答したアンケートの履歴を表示します。
-        </div>
 
         <div class="survey-list" id="mypageHistoryList">
-          <!-- JavaScriptで履歴を差し込む -->
         </div>
 
         <div style="margin-top:18px; display:flex; gap:10px;">
-          <button class="btn" onclick="location.href='/index.php'">新しいアンケート</button>
-          <button class="btn secondary" id="btnExchange">ポイント交換</button>
+          <button class="btn" onclick="location.href='/ank2.php'">新しいアンケート</button>
+          <button class="btn" id="btnExchange" onclick="location.href='/exchange.php'">景品交換</button>
         </div>
 
       </section>
 
-      <!-- ▼ RIGHT sidebar -->
       <aside class="card">
         <h2>アカウント情報</h2>
 
         <div class="muted">アカウントID</div>
         <div style="font-weight:700; margin-bottom:12px">#<?php echo $userId; ?></div>
 
-        <div class="muted">最近の獲得（例）</div>
-        <ul style="padding-left:0; list-style:none; margin-top:8px;">
-          <li style="background:#f1f5f9; padding:6px 8px; border-radius:8px;">+10pt · サンプル</li>
+        <div class="muted">最近の獲得</div>
+        <ul id="recentGainList" style="padding-left:0; list-style:none; margin-top:8px;">
         </ul>
 
         <div class="muted" style="margin-top:16px;">クイックリンク</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-          <a class="btn secondary" href="/index.php">ホーム</a>
-          <a class="btn secondary" href="/ank2.html">アンケート一覧</a>
-          <a class="btn secondary" href="/opinion.html">意見箱</a>
-          <a class="btn secondary" href="/rire2.html">履歴</a>
-          <a class="btn secondary" href="/keihin.html">景品交換</a>
+          <a class="btn secondary" href="/ank2.php">アンケート一覧</a>
+          <a class="btn secondary" href="/exchange.php">景品交換</a>
         </div>
 
       </aside>
@@ -185,56 +214,82 @@ $avatarInitial = function_exists('mb_substr')
     </footer>
   </div>
 
-  <!-- modal -->
-  <div id="modal" class="modal">
-    <div class="box">
-      <h3>ポイント交換</h3>
-      <p class="muted">※ この機能は後で実装予定です。</p>
-      <button class="btn secondary" onclick="document.getElementById('modal').classList.remove('show')">閉じる</button>
-    </div>
-  </div>
+
 
 <script>
 document.getElementById('btnExchange').addEventListener('click', () => {
   document.getElementById('modal').classList.add('show');
 });
 
-// マイページに localStorage の履歴を表示する処理
 document.addEventListener('DOMContentLoaded', () => {
   const list = document.getElementById('mypageHistoryList');
-  if (!list) return;
+  const recentGainList = document.getElementById('recentGainList');
+  const earnedPointValue = document.getElementById('earnedPointValue');
 
-  const historyData = JSON.parse(localStorage.getItem('surveyHistory') || '[]');
+  const historyData = <?php echo json_encode($dbHistory, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+  if (earnedPointValue) {
+    earnedPointValue.textContent = <?php echo (int)$dbTotalPoint; ?> + ' pt';
+  }
+
+  if (!list) return;
 
   if (historyData.length === 0) {
     list.innerHTML = '<div class="muted">回答履歴はまだありません。</div>';
-    return;
+  } else {
+    const recent = historyData.slice(-5).reverse();
+
+    recent.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'survey-item';
+
+      const name = item.name || '（名称未設定のアンケート）';
+      const date = item.date || '日付不明';
+      const point = item.point || 0;
+
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:600">${name}</div>
+          <div class="muted">回答日: ${date}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">獲得</div>
+          <div style="font-weight:700;color:var(--success);">${point} pt</div>
+        </div>
+      `;
+
+      list.appendChild(div);
+    });
   }
 
-  // 直近5件だけ表示（全部出したければ historyData.forEach に変えてOK）
-  const recent = historyData.slice(-5).reverse();
+  if (recentGainList) {
+    recentGainList.innerHTML = ''; 
 
-  recent.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'survey-item';
+    if (historyData.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'muted';
+      li.textContent = '履歴がまだありません。';
+      recentGainList.appendChild(li);
+    } else {
+      const recent = historyData.slice(-3).reverse(); 
+      recent.forEach(item => {
+        const li = document.createElement('li');
+        li.style.background = '#f1f5f9';
+        li.style.padding = '6px 8px';
+        li.style.borderRadius = '8px';
 
-    const name = item.name || '（名称未設定のアンケート）';
-    const date = item.date || '日付不明';
-    const point = item.point || 0;
+        const name = item.name || 'アンケート';
+        const date = item.date || '日付不明';
+        const point = item.point || 0;
 
-    div.innerHTML = `
-      <div>
-        <div style="font-weight:600">${name}</div>
-        <div class="muted">回答日: ${date}</div>
-      </div>
-      <div style="text-align:right">
-        <div class="muted">獲得</div>
-        <div style="font-weight:700;color:var(--success);">${point} pt</div>
-      </div>
-    `;
-
-    list.appendChild(div);
-  });
+        li.innerHTML = `
+          <div style="font-size:13px; font-weight:600;">+${point}pt · ${name}</div>
+          <div class="muted" style="font-size:11px;">${date}</div>
+        `;
+        recentGainList.appendChild(li);
+      });
+    }
+  }
 });
 </script>
 
